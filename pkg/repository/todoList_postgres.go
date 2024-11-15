@@ -3,6 +3,7 @@ package repository
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	todo "github.com/fancurson/toDoList"
 	"github.com/jmoiron/sqlx"
@@ -53,8 +54,6 @@ func (r *TodoListPostgres) GetAll(userId int) ([]todo.TodoList, error) {
 	)
 	err := r.db.Select(&lists, query, userId)
 
-	log.Printf("%+v", lists)
-
 	return lists, err
 }
 
@@ -62,6 +61,7 @@ func (r *TodoListPostgres) GetById(userId, id int) (todo.TodoList, error) {
 
 	var list todo.TodoList
 
+	log.Printf("u: %d, i: %d", userId, id)
 	query := fmt.Sprintf(`
     SELECT tl.id, tl.title, tl.description 
     FROM %s tl 
@@ -72,4 +72,57 @@ func (r *TodoListPostgres) GetById(userId, id int) (todo.TodoList, error) {
 	err := r.db.Get(&list, query, userId, id)
 
 	return list, err
+}
+
+func (r *TodoListPostgres) Delete(userId, id int) error {
+
+	query := fmt.Sprintf(`
+    DELETE FROM %s tl 
+	USING %s ul 
+	WHERE tl.id = ul.list_id AND ul.user_id=$1 AND ul.list_id=$2`,
+		todoListTable, userListTable,
+	)
+	_, err := r.db.Exec(query, userId, id)
+
+	return err
+}
+
+func (r *TodoListPostgres) Update(userId, listId int, input todo.UpdateListInput) error {
+
+	log.Printf("userID: %d", userId)
+	log.Printf("listId: %d", listId)
+	setValue := make([]string, 0)
+	args := make([]interface{}, 0)
+	argId := 1
+
+	if input.Title != nil {
+		log.Println("Check1")
+		setValue = append(setValue, fmt.Sprintf("title=$%d", argId))
+		args = append(args, *input.Title)
+		argId++
+	}
+
+	if input.Description != nil {
+		log.Println("Check2")
+		setValue = append(setValue, fmt.Sprintf("Description=$%d", argId))
+		args = append(args, *input.Description)
+		argId++
+	}
+
+	setQuery := strings.Join(setValue, ", ")
+
+	query := fmt.Sprintf(`
+	UPDATE %s tl
+	SET %s
+	FROM %s ul
+	WHERE tl.id = ul.list_id AND ul.user_id=$%d AND ul.list_id=$%d
+	`, todoListTable, setQuery, userListTable, argId, argId+1)
+
+	args = append(args, userId, listId)
+
+	log.Printf("updateQuery: %s", query)
+	log.Printf("args: %s", args...)
+
+	_, err := r.db.Exec(query, args...)
+	return err
 }
