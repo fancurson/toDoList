@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	todo "github.com/fancurson/toDoList"
 	"github.com/fancurson/toDoList/pkg/handler"
@@ -41,11 +44,27 @@ func main() {
 	handler := handler.NewHandler(serv)
 
 	srv := new(todo.Server)
+	go func() {
+
+		if err := srv.Run(viper.GetString("port"), handler.InitRouters()); err != nil {
+			logrus.Fatalf("Error occured while starting http server: %w", err)
+		}
+	}()
 
 	fmt.Println("Starting server on :3000...")
-	if err := srv.Run(viper.GetString("port"), handler.InitRouters()); err != nil {
-		logrus.Fatalf("Error occured while starting http server: %w", err)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	<-quit
+
+	fmt.Println("Ending work...")
+	if err = srv.Shutdown(context.Background()); err != nil {
+		logrus.Errorf("error occure on server shutting down", err.Error())
 	}
+
+	if err = db.Close(); err != nil {
+		logrus.Errorf("error occure on db connection close", err.Error())
+	}
+
 }
 
 func must(err error, message string) {
