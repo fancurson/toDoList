@@ -58,8 +58,74 @@ func (h *Handler) getAllItems(c *gin.Context) {
 	c.JSON(http.StatusOK, items)
 }
 
-func (h *Handler) getItemsById(c *gin.Context) {}
+func (h *Handler) getItemsById(c *gin.Context) {
+	userId, err := getUserId(c)
+	if err != nil {
+		return
+	}
+	itemId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		newErrorResponse(c, http.StatusBadRequest, "invalid item id param")
+		return
+	}
 
-func (h *Handler) updateItems(c *gin.Context) {}
+	item, err := h.service.TodoItem.GetById(userId, itemId)
+	if err != nil {
+		newErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
 
-func (h *Handler) deleteItem(c *gin.Context) {}
+	c.JSON(http.StatusOK, item)
+}
+
+func (h *Handler) updateItems(c *gin.Context) {
+
+	userId, err := getUserId(c)
+	if err != nil {
+		return
+	}
+	itemId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		newErrorResponse(c, http.StatusBadRequest, "invalid item id param")
+		return
+	}
+
+	var input todo.UpdateItemInput
+	if err := c.BindJSON(&input); err != nil {
+		newErrorResponse(c, http.StatusBadRequest, "invalid input request")
+		return
+	}
+
+	err = h.service.TodoItem.Update(userId, itemId, input)
+	if err != nil {
+		newErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, statusResponse{
+		Status: "ok",
+	})
+
+}
+
+func (h *Handler) deleteItem(c *gin.Context) {
+	userId, err := getUserId(c)
+	if err != nil {
+		return
+	}
+	itemId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		newErrorResponse(c, http.StatusBadRequest, "invalid item id param")
+		return
+	}
+
+	err = h.service.TodoItem.Delete(userId, itemId)
+	if err != nil {
+		newErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, statusResponse{
+		Status: "ok",
+	})
+}
