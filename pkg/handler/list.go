@@ -37,20 +37,16 @@ type getAllListsResponse struct {
 }
 
 func (h *Handler) getAllLists(c *gin.Context) {
-	log.Println("Check point 1")
 	userId, err := getUserId(c)
 	if err != nil {
 		return
 	}
-	log.Printf("Check point 2, id: %d", userId)
 
 	lists, err := h.service.TodoList.GetAll(userId)
 	if err != nil {
 		newErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	log.Printf("%+v", lists)
 
 	c.JSON(http.StatusOK, getAllListsResponse{
 		Data: lists,

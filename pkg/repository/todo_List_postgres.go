@@ -13,7 +13,7 @@ type TodoListPostgres struct {
 	db *sqlx.DB
 }
 
-func NewTodoListService(db *sqlx.DB) *TodoListPostgres {
+func NewTodoListPostgres(db *sqlx.DB) *TodoListPostgres {
 	return &TodoListPostgres{
 		db: db,
 	}
@@ -61,7 +61,6 @@ func (r *TodoListPostgres) GetById(userId, id int) (todo.TodoList, error) {
 
 	var list todo.TodoList
 
-	log.Printf("u: %d, i: %d", userId, id)
 	query := fmt.Sprintf(`
     SELECT tl.id, tl.title, tl.description 
     FROM %s tl 
@@ -89,8 +88,6 @@ func (r *TodoListPostgres) Delete(userId, id int) error {
 
 func (r *TodoListPostgres) Update(userId, listId int, input todo.UpdateListInput) error {
 
-	log.Printf("userID: %d", userId)
-	log.Printf("listId: %d", listId)
 	setValue := make([]string, 0)
 	args := make([]interface{}, 0)
 	argId := 1
@@ -119,9 +116,6 @@ func (r *TodoListPostgres) Update(userId, listId int, input todo.UpdateListInput
 	`, todoListTable, setQuery, userListTable, argId, argId+1)
 
 	args = append(args, userId, listId)
-
-	log.Printf("updateQuery: %s", query)
-	log.Printf("args: %s", args...)
 
 	_, err := r.db.Exec(query, args...)
 	return err
